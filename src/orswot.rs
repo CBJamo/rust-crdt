@@ -1,5 +1,4 @@
 /// Observed-Remove Set With Out Tombstones (ORSWOT), ported directly from `riak_dt`.
-use alloc::boxed::Box;
 use alloc::vec::Vec;
 use core::cmp::Ordering;
 use core::fmt::{Debug, Display};
@@ -368,69 +367,72 @@ impl<M: Hash + Clone + Eq, A: Ord + Hash + Clone> Orswot<M, A> {
 }
 
 #[cfg(feature = "quickcheck")]
-use quickcheck::{Arbitrary, Gen};
+mod check {
+    use super::*;
+    use alloc::boxed::Box;
+    use quickcheck::{Arbitrary, Gen};
 
-#[cfg(feature = "quickcheck")]
-impl<A: Ord + Hash + Arbitrary + Debug, M: Hash + Eq + Arbitrary> Arbitrary for Op<M, A> {
-    fn arbitrary(g: &mut Gen) -> Self {
-        let dot = Dot::arbitrary(g);
-        let clock = VClock::arbitrary(g);
+    impl<A: Ord + Hash + Arbitrary + Debug, M: Hash + Eq + Arbitrary> Arbitrary for Op<M, A> {
+        fn arbitrary(g: &mut Gen) -> Self {
+            let dot = Dot::arbitrary(g);
+            let clock = VClock::arbitrary(g);
 
-        let mut members_set = HashSet::new();
-        for _ in 0..u8::arbitrary(g) % 10 {
-            members_set.insert(M::arbitrary(g));
-        }
-        let members: Vec<_> = members_set.into_iter().collect();
-
-        match u8::arbitrary(g) % 2 {
-            0 => Op::Add { members, dot },
-            1 => Op::Rm { members, clock },
-            _ => panic!("tried to generate invalid op"),
-        }
-    }
-
-    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
-        let mut shrunk_ops = Vec::new();
-        match self {
-            Op::Add { members, dot } => {
-                for (i, _m) in members.iter().enumerate() {
-                    let mut shrunk_members = members.clone();
-                    shrunk_members.remove(i);
-
-                    shrunk_ops.push(Op::Add {
-                        members: shrunk_members,
-                        dot: dot.clone(),
-                    });
-                }
-
-                dot.shrink().for_each(|shrunk_dot| {
-                    shrunk_ops.push(Op::Add {
-                        members: members.clone(),
-                        dot: shrunk_dot,
-                    })
-                });
+            let mut members_set = HashSet::new();
+            for _ in 0..u8::arbitrary(g) % 10 {
+                members_set.insert(M::arbitrary(g));
             }
-            Op::Rm { members, clock } => {
-                for (i, _m) in members.iter().enumerate() {
-                    let mut shrunk_members = members.clone();
-                    shrunk_members.remove(i);
+            let members: Vec<_> = members_set.into_iter().collect();
 
-                    shrunk_ops.push(Op::Rm {
-                        members: shrunk_members,
-                        clock: clock.clone(),
-                    });
-                }
-
-                clock.shrink().for_each(|shrunk_clock| {
-                    shrunk_ops.push(Op::Rm {
-                        members: members.clone(),
-                        clock: shrunk_clock,
-                    })
-                });
+            match u8::arbitrary(g) % 2 {
+                0 => Op::Add { members, dot },
+                1 => Op::Rm { members, clock },
+                _ => panic!("tried to generate invalid op"),
             }
         }
 
-        Box::new(shrunk_ops.into_iter())
+        fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+            let mut shrunk_ops = Vec::new();
+            match self {
+                Op::Add { members, dot } => {
+                    for (i, _m) in members.iter().enumerate() {
+                        let mut shrunk_members = members.clone();
+                        shrunk_members.remove(i);
+
+                        shrunk_ops.push(Op::Add {
+                            members: shrunk_members,
+                            dot: dot.clone(),
+                        });
+                    }
+
+                    dot.shrink().for_each(|shrunk_dot| {
+                        shrunk_ops.push(Op::Add {
+                            members: members.clone(),
+                            dot: shrunk_dot,
+                        })
+                    });
+                }
+                Op::Rm { members, clock } => {
+                    for (i, _m) in members.iter().enumerate() {
+                        let mut shrunk_members = members.clone();
+                        shrunk_members.remove(i);
+
+                        shrunk_ops.push(Op::Rm {
+                            members: shrunk_members,
+                            clock: clock.clone(),
+                        });
+                    }
+
+                    clock.shrink().for_each(|shrunk_clock| {
+                        shrunk_ops.push(Op::Rm {
+                            members: members.clone(),
+                            clock: shrunk_clock,
+                        })
+                    });
+                }
+            }
+
+            Box::new(shrunk_ops.into_iter())
+        }
     }
 }
 

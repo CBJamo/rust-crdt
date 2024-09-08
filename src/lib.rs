@@ -45,6 +45,7 @@ pub mod minreg;
 pub mod identifier;
 
 /// This module contains an Observed-Remove Set With Out Tombstones.
+#[cfg(feature = "std")]
 pub mod orswot;
 
 /// This module contains a Grow-only Counter.
@@ -63,6 +64,7 @@ pub mod glist;
 pub mod pncounter;
 
 /// This module contains a Map with Reset-Remove and Observed-Remove semantics.
+#[cfg(feature = "std")]
 pub mod map;
 
 /// This module contains context for editing a CRDT.
@@ -72,6 +74,7 @@ pub mod ctx;
 #[cfg(feature = "num")]
 pub mod list;
 
+#[cfg(any(feature = "num", feature = "merkle"))]
 mod serde_helper;
 
 #[cfg(feature = "num")]

@@ -1,5 +1,3 @@
-use alloc::boxed::Box;
-use alloc::vec::Vec;
 use core::cmp::{Ordering, PartialOrd};
 use core::fmt;
 use core::hash::{Hash, Hasher};
@@ -77,23 +75,27 @@ impl<A> From<(A, u64)> for Dot<A> {
 }
 
 #[cfg(feature = "quickcheck")]
-use quickcheck::{Arbitrary, Gen};
+mod check {
+    use super::*;
+    use alloc::boxed::Box;
+    use alloc::vec::Vec;
+    use quickcheck::{Arbitrary, Gen};
 
-#[cfg(feature = "quickcheck")]
-impl<A: Arbitrary + Clone> Arbitrary for Dot<A> {
-    fn arbitrary(g: &mut Gen) -> Self {
-        Dot {
-            actor: A::arbitrary(g),
-            counter: u64::arbitrary(g) % 50,
+    impl<A: Arbitrary + Clone> Arbitrary for Dot<A> {
+        fn arbitrary(g: &mut Gen) -> Self {
+            Dot {
+                actor: A::arbitrary(g),
+                counter: u64::arbitrary(g) % 50,
+            }
         }
-    }
 
-    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
-        let mut shrunk_dots = Vec::new();
-        if self.counter > 0 {
-            shrunk_dots.push(Self::new(self.actor.clone(), self.counter - 1));
+        fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+            let mut shrunk_dots = Vec::new();
+            if self.counter > 0 {
+                shrunk_dots.push(Self::new(self.actor.clone(), self.counter - 1));
+            }
+            Box::new(shrunk_dots.into_iter())
         }
-        Box::new(shrunk_dots.into_iter())
     }
 }
 

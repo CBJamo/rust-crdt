@@ -12,9 +12,7 @@
 //! assert!(a > b);
 //! ```
 
-use alloc::boxed::Box;
 use alloc::collections::{btree_map, BTreeMap};
-use alloc::vec::Vec;
 use core::cmp::{self, Ordering};
 use core::convert::Infallible;
 use core::fmt::{self, Debug, Display};
@@ -327,34 +325,39 @@ impl<A: Ord + Clone + Debug> From<Dot<A>> for VClock<A> {
 }
 
 #[cfg(feature = "quickcheck")]
-use quickcheck::{Arbitrary, Gen};
+mod check {
+    use super::*;
+    use alloc::boxed::Box;
+    use alloc::vec::Vec;
+    use quickcheck::{Arbitrary, Gen};
 
-#[cfg(feature = "quickcheck")]
-impl<A: Ord + Clone + Debug + Arbitrary> Arbitrary for VClock<A> {
-    fn arbitrary(g: &mut Gen) -> Self {
-        let mut clock = VClock::default();
+    impl<A: Ord + Clone + Debug + Arbitrary> Arbitrary for VClock<A> {
+        fn arbitrary(g: &mut Gen) -> Self {
+            let mut clock = VClock::default();
 
-        for _ in 0..u8::arbitrary(g) % 10 {
-            clock.apply(Dot::arbitrary(g));
-        }
-
-        clock
-    }
-
-    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
-        let mut shrunk_clocks = Vec::default();
-        for dot in self.clone().into_iter() {
-            let clock_without_dot: Self = self.clone().into_iter().filter(|d| d != &dot).collect();
-
-            for shrunk_dot in dot.shrink() {
-                let mut clock = clock_without_dot.clone();
-                clock.apply(shrunk_dot);
-                shrunk_clocks.push(clock);
+            for _ in 0..u8::arbitrary(g) % 10 {
+                clock.apply(Dot::arbitrary(g));
             }
 
-            shrunk_clocks.push(clock_without_dot);
+            clock
         }
 
-        Box::new(shrunk_clocks.into_iter())
+        fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+            let mut shrunk_clocks = Vec::default();
+            for dot in self.clone().into_iter() {
+                let clock_without_dot: Self =
+                    self.clone().into_iter().filter(|d| d != &dot).collect();
+
+                for shrunk_dot in dot.shrink() {
+                    let mut clock = clock_without_dot.clone();
+                    clock.apply(shrunk_dot);
+                    shrunk_clocks.push(clock);
+                }
+
+                shrunk_clocks.push(clock_without_dot);
+            }
+
+            Box::new(shrunk_clocks.into_iter())
+        }
     }
 }
